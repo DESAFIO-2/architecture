@@ -15,7 +15,7 @@
           "idField": "id",
           "textField": "pergunta",
           "groupField": "esperado",
-          "labelField": "categoria"
+          "labelField": "pergunta"
         },
         {
           "id": "injecao_v1",
@@ -24,7 +24,7 @@
           "idField": "id",
           "textField": "pergunta",
           "groupField": "esperado",
-          "labelField": "categoria"
+          "labelField": "pergunta"
         },
         {
           "id": "seguranca_variantes_v2",
@@ -32,7 +32,7 @@
           "format": "jsonl",
           "idField": "id",
           "textField": "pergunta",
-          "labelField": "categoria",
+          "labelField": "pergunta",
           "groupValue": "variante de segurança (v2)"
         }
       ]
@@ -58,7 +58,7 @@
           "idField": "chunk_id",
           "textField": "text",
           "groupField": "source.source_id",
-          "labelField": "source.version"
+          "labelField": "literal_text"
         }
       ]
     },
@@ -83,7 +83,7 @@
           "idField": "id",
           "textField": "query",
           "groupValue": "pergunta (golden v2)",
-          "labelField": "persona"
+          "labelField": "query"
         }
       ]
     },
@@ -99,7 +99,7 @@
           "idField": "id",
           "textField": "reference_answer",
           "groupField": "expected_route",
-          "labelField": "persona"
+          "labelField": "query"
         }
       ]
     }

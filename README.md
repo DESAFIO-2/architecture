@@ -10,17 +10,23 @@ O site tem três visões, todas desenhadas a partir de arquivos versionados:
 | --- | --- | --- |
 | Arquitetura atual | [`model/system.json`](model/system.json) | Os quatro repositórios, de onde vêm os dados até os clientes, e os achados do arquiteto |
 | Arquitetura de IA | [`model/ai.json`](model/ai.json) | Guardrails, agentes, recuperação, modelos e avaliação, com as métricas como foram publicadas |
-| Projetor de embeddings | [`model/agents.json`](model/agents.json) | Para cada agente, o que ele consulta, projetado em 3D a partir do `bge-m3` |
+| Projetor de embeddings | [`model/agents.json`](model/agents.json) | Para cada agente, o que ele consulta, em 3D (PCA ou t-SNE animado) a partir do `bge-m3` |
 
 ## Estrutura
 
 ```text
 model/        fonte única: arquitetura como dados (JSON), com o commit de origem de cada visão
-site/         Vite + TypeScript, sem framework; desenha o modelo em SVG e o projetor com Plotly
-projector/    Python: lê os datasets de cada agente, gera embeddings no Ollama local, faz PCA 3D
+site/         Vite + TypeScript, sem framework; desenha o modelo em SVG e o projetor em WebGL (three.js)
+projector/    Python: lê os datasets de cada agente, gera embeddings no Ollama local, calcula PCA e t-SNE 3D
 governance/   ruleset da main e script que o aplica no GitHub
 docs/adr/     decisões deste repositório
 ```
+
+No site, o projetor abre com a nuvem se formando (replay da otimização do t-SNE) e girando.
+Dá para alternar PCA e t-SNE (transição animada), 3D e 2D, colorir por grupo ou dataset,
+ligar e desligar categorias na legenda, buscar texto e clicar num ponto para ver os vizinhos com a
+similaridade de cosseno, inclusive isolando a vizinhança. Com "reduzir movimento" ligado no
+sistema, as animações são desligadas.
 
 O projetor segue portas e adaptadores: `build.py` (caso de uso) depende de `Embedder` e
 `DocumentSource` (`ports.py`). `ollama.py` e `sources.py` são as implementações, e `cli.py` é

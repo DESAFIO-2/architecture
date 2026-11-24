@@ -50,10 +50,16 @@ def test_build_and_serialize_round_trip() -> None:
     )
     payload = to_payload(projection, "2026-11-24T00:00:00Z")
 
+    assert payload["schema"] == "projector/v2"
     assert payload["model"] == "fake"
+    assert payload["dimensions"] == 4
     assert len(payload["points"]) == 8
     assert all(len(p["text"]) <= TEXT_LIMIT for p in payload["points"])
-    assert all(len(p["neighbors"]) == 5 for p in payload["points"])
+    assert all(len(p["neighbors"]) == len(p["similarity"]) == 7 for p in payload["points"])
+    pca, tsne = payload["layouts"]
+    assert (pca["id"], tsne["id"]) == ("pca", "tsne")
+    assert len(pca["frames"]) == 1 and len(tsne["frames"]) > 1
+    assert all(len(frame) == 8 * 3 for frame in pca["frames"] + tsne["frames"])
     assert to_index([payload])["agents"][0] == {
         "id": "a",
         "label": "A",
@@ -63,8 +69,8 @@ def test_build_and_serialize_round_trip() -> None:
     json.dumps(payload)
 
 
-def test_build_requires_two_documents() -> None:
-    docs = [Document("ds:1", "ds", "só um", "g", "1")]
+def test_build_requires_four_documents() -> None:
+    docs = [Document(f"ds:{i}", "ds", "poucos", "g", str(i)) for i in range(3)]
 
     with pytest.raises(ValueError):
         build_projection(

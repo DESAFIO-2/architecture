@@ -30,7 +30,8 @@ app.append(
 );
 
 function render(): void {
-  const route = ROUTES.find((r) => r.hash === location.hash) ?? ROUTES[0];
+  const base = location.hash.split("/").slice(0, 2).join("/");
+  const route = ROUTES.find((r) => r.hash === base) ?? ROUTES[0];
   nav.querySelectorAll("a").forEach((a) => {
     a.toggleAttribute("aria-current", a.getAttribute("href") === route.hash);
   });

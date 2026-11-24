@@ -1,4 +1,4 @@
-// Transformação pura de pontos em séries por grupo. Testável sem Plotly.
+// Agrupamento, cores e busca. Puro, testável sem WebGL.
 
 import type { ProjectorPoint } from "./types";
 
@@ -8,44 +8,38 @@ export const PALETTE = [
   "#8a5a44", "#3f51b5", "#00897b",
 ];
 
-export interface Series {
-  group: string;
-  color: string;
-  indices: number[];
+export type ColorBy = "group" | "dataset";
+
+export function keyOf(point: ProjectorPoint, by: ColorBy): string {
+  return by === "group" ? point.group : point.dataset;
 }
 
-/** Agrupa os pontos visíveis. Grupos maiores primeiro; a cor segue a ordem de `allGroups`. */
-export function seriesByGroup(
-  points: ProjectorPoint[],
-  visibleDatasets: ReadonlySet<string>,
-  allGroups: string[],
-): Series[] {
-  const byGroup = new Map<string, number[]>();
-  points.forEach((p, i) => {
-    if (!visibleDatasets.has(p.dataset)) return;
-    const list = byGroup.get(p.group) ?? [];
-    list.push(i);
-    byGroup.set(p.group, list);
-  });
-  return [...byGroup.entries()]
-    .map(([group, indices]) => ({
-      group,
-      indices,
-      color: PALETTE[allGroups.indexOf(group) % PALETTE.length] ?? "#7c8b9c",
-    }))
-    .sort((a, b) => b.indices.length - a.indices.length || a.group.localeCompare(b.group));
-}
-
-export function groupsOf(points: ProjectorPoint[]): string[] {
+/** Categorias da maior para a menor; a posição define a cor, então ela é estável. */
+export function categoriesOf(points: ProjectorPoint[], by: ColorBy): { key: string; count: number; color: string }[] {
   const counts = new Map<string, number>();
-  for (const p of points) counts.set(p.group, (counts.get(p.group) ?? 0) + 1);
+  for (const p of points) counts.set(keyOf(p, by), (counts.get(keyOf(p, by)) ?? 0) + 1);
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([g]) => g);
+    .map(([key, count], i) => ({ key, count, color: PALETTE[i % PALETTE.length] ?? "#7c8b9c" }));
 }
 
-export function matches(point: ProjectorPoint, query: string): boolean {
-  const q = query.trim().toLocaleLowerCase("pt-BR");
-  if (!q) return false;
-  return `${point.text} ${point.label} ${point.id}`.toLocaleLowerCase("pt-BR").includes(q);
+export function normalize(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR");
+}
+
+/** Busca sem diferenciar maiúsculas nem acentos ("acido" acha "ácido"). */
+export function search(points: ProjectorPoint[], query: string, limit = 50): number[] {
+  const q = normalize(query.trim());
+  if (!q) return [];
+  const found: number[] = [];
+  for (let i = 0; i < points.length && found.length < limit; i++) {
+    const p = points[i] as ProjectorPoint;
+    if (normalize(`${p.text} ${p.label} ${p.id}`).includes(q)) found.push(i);
+  }
+  return found;
+}
+
+export function shortLabel(point: ProjectorPoint, max = 42): string {
+  const base = point.label || point.text;
+  return base.length > max ? `${base.slice(0, max - 1).trimEnd()}…` : base;
 }
