@@ -39,18 +39,34 @@ class Document:
     label: str
 
 
+Coords = tuple[float, float, float]
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Uma forma de dispor os pontos em 3D. Vários quadros quando a disposição é animada."""
+
+    id: str
+    label: str
+    note: str
+    frames: tuple[tuple[Coords, ...], ...]
+    iterations: tuple[int, ...] = ()
+
+
 @dataclass(frozen=True)
 class ProjectedPoint:
     document: Document
-    coords: tuple[float, float, float]
     neighbors: tuple[int, ...]
+    similarities: tuple[float, ...]
 
 
 @dataclass(frozen=True)
 class Projection:
     agent: AgentSpec
     model: str
+    dimensions: int
     source_repo: str
     source_commit: str
     explained_variance: tuple[float, float, float]
+    layouts: tuple[Layout, ...] = field(default_factory=tuple)
     points: tuple[ProjectedPoint, ...] = field(default_factory=tuple)

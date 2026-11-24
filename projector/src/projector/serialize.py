@@ -4,14 +4,25 @@ from __future__ import annotations
 
 from typing import Any
 
-from projector.domain import Projection
+from projector.domain import Layout, Projection
 
 TEXT_LIMIT = 280
-SCHEMA = "projector/v1"
+SCHEMA = "projector/v2"
 
 
 def _short(text: str) -> str:
     return text if len(text) <= TEXT_LIMIT else text[: TEXT_LIMIT - 1].rstrip() + "…"
+
+
+def _layout(layout: Layout) -> dict[str, Any]:
+    # Quadros achatados [x0, y0, z0, x1, ...] com 4 casas: menos bytes, mesma figura.
+    return {
+        "id": layout.id,
+        "label": layout.label,
+        "note": layout.note,
+        "iterations": list(layout.iterations),
+        "frames": [[round(c, 4) for xyz in frame for c in xyz] for frame in layout.frames],
+    }
 
 
 def to_payload(projection: Projection, generated_at: str) -> dict[str, Any]:
@@ -20,6 +31,7 @@ def to_payload(projection: Projection, generated_at: str) -> dict[str, Any]:
         "schema": SCHEMA,
         "agent": {"id": agent.id, "label": agent.label, "question": agent.question},
         "model": projection.model,
+        "dimensions": projection.dimensions,
         "generatedAt": generated_at,
         "source": {
             "repo": projection.source_repo,
@@ -27,6 +39,7 @@ def to_payload(projection: Projection, generated_at: str) -> dict[str, Any]:
             "datasets": [{"id": d.id, "path": d.path} for d in agent.datasets],
         },
         "explainedVariance": [round(v, 4) for v in projection.explained_variance],
+        "layouts": [_layout(layout) for layout in projection.layouts],
         "points": [
             {
                 "id": p.document.id,
@@ -34,10 +47,8 @@ def to_payload(projection: Projection, generated_at: str) -> dict[str, Any]:
                 "group": p.document.group,
                 "label": p.document.label,
                 "text": _short(p.document.text),
-                "x": round(p.coords[0], 5),
-                "y": round(p.coords[1], 5),
-                "z": round(p.coords[2], 5),
                 "neighbors": list(p.neighbors),
+                "similarity": [round(s, 4) for s in p.similarities],
             }
             for p in projection.points
         ],

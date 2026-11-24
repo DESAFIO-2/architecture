@@ -1,5 +1,5 @@
 {
-  "schema": "projector/v1",
+  "schema": "projector/v2",
   "agents": [
     {
       "id": "triagem",
