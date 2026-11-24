@@ -22,10 +22,20 @@ const MORPH_MS = 1100;
 const prefersReducedMotion = (): boolean =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-async function fetchJson<T>(file: string): Promise<T> {
-  const response = await fetch(`${DATA_DIR}/${file}`);
+const SCHEMA = "projector/v2";
+
+/**
+ * Sempre revalida com o servidor (`no-cache`): o GitHub Pages manda guardar por 10 minutos,
+ * e um JSON antigo no cache quebraria o código novo depois de cada atualização dos dados.
+ */
+async function fetchJson<T extends { schema: string }>(file: string): Promise<T> {
+  const response = await fetch(`${DATA_DIR}/${file}`, { cache: "no-cache" });
   if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
-  return (await response.json()) as T;
+  const data = (await response.json()) as T;
+  if (data.schema !== SCHEMA) {
+    throw new Error(`${file} está no formato ${data.schema}, esperado ${SCHEMA}. Recarregue a página.`);
+  }
+  return data;
 }
 
 const cssVar = (name: string): string =>
