@@ -1,0 +1,29 @@
+{
+  "schema": "projector/v1",
+  "agents": [
+    {
+      "id": "triagem",
+      "label": "1. Triagem",
+      "file": "triagem.json",
+      "points": 109
+    },
+    {
+      "id": "auditor_farmaceutico",
+      "label": "2. Auditor farmacêutico",
+      "file": "auditor_farmaceutico.json",
+      "points": 3822
+    },
+    {
+      "id": "consultor_normativo",
+      "label": "3. Consultor normativo",
+      "file": "consultor_normativo.json",
+      "points": 42
+    },
+    {
+      "id": "sintetizador_cidadao",
+      "label": "4. Sintetizador cidadão",
+      "file": "sintetizador_cidadao.json",
+      "points": 22
+    }
+  ]
+}

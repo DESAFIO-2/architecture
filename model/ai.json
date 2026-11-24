@@ -1,0 +1,522 @@
+{
+  "id": "ai",
+  "title": "Arquitetura de IA",
+  "subtitle": "Só a parte de IA: guardrails, agentes, conhecimento, modelos e avaliação, com as métricas como foram publicadas.",
+  "asOf": "2026-11-24",
+  "sources": [
+    {
+      "repo": "development",
+      "commit": "3d0ded5"
+    },
+    {
+      "repo": "data-engineering",
+      "commit": "8b9f15a"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "entrada",
+      "title": "Entrada e guardrails"
+    },
+    {
+      "id": "agentes",
+      "title": "Agentes (LangGraph)"
+    },
+    {
+      "id": "conhecimento",
+      "title": "Conhecimento e recuperação"
+    },
+    {
+      "id": "modelos",
+      "title": "Modelos"
+    },
+    {
+      "id": "avaliacao",
+      "title": "Avaliação"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "pergunta",
+      "lane": "entrada",
+      "label": "Pedido do cidadão",
+      "kind": "actor",
+      "status": "active",
+      "description": "Itens estruturados (até 50), região administrativa e pergunta administrativa opcional. Sem texto livre de receita."
+    },
+    {
+      "id": "pii",
+      "lane": "entrada",
+      "label": "Mascaramento de PII",
+      "kind": "guardrail",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/guardrails/pii.py",
+      "description": "CPF, CNS, RG, CRM, CID-10, CEP, endereço, telefone, e-mail e identificação do paciente, mascarados antes de qualquer agente ou log (LGPD)."
+    },
+    {
+      "id": "camada1",
+      "lane": "entrada",
+      "label": "Guardrail clínico, camada 1",
+      "kind": "guardrail",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/guardrails/clinical.py",
+      "description": "Regras determinísticas para pedido de prescrição, dose e emergência (SAMU 192). Ainda há paráfrases que passam.",
+      "metrics": [
+        {
+          "label": "guardrail_clinico_v1 (45 casos): recall",
+          "value": "100%",
+          "target": "100%",
+          "pass": true,
+          "note": "Medido na main 3d0ded5 em 24/11 com make eval-guardrail."
+        },
+        {
+          "label": "guardrail_clinico_v1: falso bloqueio",
+          "value": "0%",
+          "target": "≤ 5%",
+          "pass": true,
+          "note": "Medido na main 3d0ded5 em 24/11 com make eval-guardrail."
+        },
+        {
+          "label": "Holdout cego do protocolo",
+          "value": "não medido",
+          "target": "recall 100%",
+          "pass": null
+        }
+      ]
+    },
+    {
+      "id": "camada2",
+      "lane": "entrada",
+      "label": "Guardrail clínico, camada 2",
+      "kind": "guardrail",
+      "status": "experimental",
+      "repo": "development",
+      "path": "backend/app/guardrails/segunda_camada.py",
+      "description": "Llama Guard 3 1B no Ollama, falha fechada em produção. Pronta para medir e não ligada à API: depende do holdout e de um ADR."
+    },
+    {
+      "id": "injecao",
+      "lane": "entrada",
+      "label": "Anti-injeção",
+      "kind": "guardrail",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/seguranca/injecao.py",
+      "description": "Inspeciona a entrada e os trechos recuperados (injeção indireta) antes do modelo.",
+      "metrics": [
+        {
+          "label": "4 braços: injeção",
+          "value": "4/4",
+          "target": "4/4",
+          "pass": true
+        },
+        {
+          "label": "4 braços: dados pessoais",
+          "value": "4/4",
+          "target": "4/4",
+          "pass": true
+        },
+        {
+          "label": "4 braços: SEG-CLI-01 a 04",
+          "value": "0/4 em todos os braços",
+          "target": "4/4",
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "triagem",
+      "lane": "agentes",
+      "label": "1. Triagem",
+      "kind": "agent",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/application/use_cases/triage.py",
+      "description": "Inspeciona cada campo, prioriza emergência e mascara PII. Se bloquear, vai direto para a síntese, sem recuperar nem gerar."
+    },
+    {
+      "id": "auditor",
+      "lane": "agentes",
+      "label": "2. Auditor farmacêutico",
+      "kind": "agent",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/application/use_cases/audit_prescription.py",
+      "description": "Casa cada item com o catálogo oficial, decide rota, validade e documentos, e anexa a evidência literal."
+    },
+    {
+      "id": "consultor",
+      "lane": "agentes",
+      "label": "3. Consultor normativo",
+      "kind": "agent",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/application/use_cases/consult_norms.py",
+      "description": "Recupera até 3 trechos normativos para a pergunta adicional. Não toma decisão clínica."
+    },
+    {
+      "id": "sintetizador",
+      "lane": "agentes",
+      "label": "4. Sintetizador cidadão",
+      "kind": "agent",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/application/use_cases/synthesize_guidance.py",
+      "description": "Consolida o cartão, define a rota (mista quando há mais de um canal) e, se configurado, pede ao modelo uma explicação."
+    },
+    {
+      "id": "saida",
+      "lane": "agentes",
+      "label": "Validação de saída",
+      "kind": "guardrail",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/seguranca/saida.py, backend/app/seguranca/citacoes.py",
+      "description": "Rejeita ato médico, PII e citação inventada. Se rejeitar, devolve o resultado determinístico (fallback)."
+    },
+    {
+      "id": "matcher",
+      "lane": "conhecimento",
+      "label": "Matcher tabular DCB",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/retrieval/tabular_matcher.py",
+      "description": "Casamento exato e normalizado contra 1.708 apresentações canônicas."
+    },
+    {
+      "id": "evidencia",
+      "lane": "conhecimento",
+      "label": "Evidência por occurrence_id",
+      "kind": "store",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/infrastructure/persistence/repositories/evidence_chunk_repository.py",
+      "description": "2.114 trechos literais. A presença documental é por ID exato, sem similaridade."
+    },
+    {
+      "id": "hibrido",
+      "lane": "conhecimento",
+      "label": "BM25 + TF-IDF com RRF",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/retrieval/hybrid_retriever.py",
+      "description": "Fusão por Reciprocal Rank Fusion (k = 60) sobre 20 chunks normativos. Sem embeddings em execução.",
+      "metrics": [
+        {
+          "label": "Golden v1+v2: Hit Rate@3",
+          "value": "100%",
+          "target": "—",
+          "pass": true
+        },
+        {
+          "label": "Golden v1+v2: MRR",
+          "value": "1,0000",
+          "target": "—",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "registry",
+      "lane": "conhecimento",
+      "label": "PublicContextRegistry",
+      "kind": "guardrail",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/seguranca/contexto.py",
+      "description": "Só deixa chegar ao modelo um trecho que bate com o corpus carregado, em identidade e conteúdo."
+    },
+    {
+      "id": "chroma",
+      "lane": "conhecimento",
+      "label": "ChromaDB v10",
+      "kind": "store",
+      "status": "experimental",
+      "repo": "data-engineering",
+      "path": "src/rag/vector.py",
+      "description": "Busca vetorial com gemini-embedding-2 no chat de terminal do data-engineering. Fora da API."
+    },
+    {
+      "id": "qwen7",
+      "lane": "modelos",
+      "label": "Qwen 2.5 7B",
+      "kind": "model",
+      "status": "experimental",
+      "description": "Gerador dos agentes no comparativo da Semana 4 (APP_AGENTS_MODEL padrão). Roda local no Ollama.",
+      "metrics": [
+        {
+          "label": "S4 Faithfulness",
+          "value": "0,8095",
+          "target": "≥ 0,92",
+          "pass": false
+        },
+        {
+          "label": "S4 Answer Relevancy",
+          "value": "0,8824",
+          "target": "≥ 0,88",
+          "pass": true
+        },
+        {
+          "label": "S4 latência p95",
+          "value": "17,87 s",
+          "target": "≤ 8 s",
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "qwen14",
+      "lane": "modelos",
+      "label": "Qwen 2.5 14B (q4)",
+      "kind": "model",
+      "status": "experimental",
+      "description": "Gerador da Semana 3 (semana3-qwen14, temperatura 0, seed 42) e da Semana 4. Também é o juiz.",
+      "metrics": [
+        {
+          "label": "S3 Faithfulness (12/11)",
+          "value": "0,8698",
+          "target": "≥ 0,92",
+          "pass": false
+        },
+        {
+          "label": "S3 Answer Relevancy (12/11)",
+          "value": "0,6751",
+          "target": "≥ 0,88",
+          "pass": false
+        },
+        {
+          "label": "S4 Faithfulness",
+          "value": "1,0000",
+          "target": "≥ 0,92",
+          "pass": true
+        },
+        {
+          "label": "S4 Answer Relevancy",
+          "value": "0,8229",
+          "target": "≥ 0,88",
+          "pass": false
+        },
+        {
+          "label": "S4 latência p95",
+          "value": "37,28 s",
+          "target": "≤ 8 s",
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "lane": "modelos",
+      "label": "Gemini",
+      "kind": "model",
+      "status": "planned",
+      "description": "Provedor padrão do config (llm_provider = gemini), usado pelo chat do data-engineering e pela voz do Data-Science. Não tem medição publicada no backend."
+    },
+    {
+      "id": "llamaguard",
+      "lane": "modelos",
+      "label": "Llama Guard 3 1B",
+      "kind": "model",
+      "status": "experimental",
+      "description": "Classificador de moderação genérico da camada 2. A Meta não o valida para triagem clínica."
+    },
+    {
+      "id": "bgem3",
+      "lane": "modelos",
+      "label": "bge-m3",
+      "kind": "model",
+      "status": "active",
+      "description": "Embeddings do RAGAS (Answer Relevancy) e deste projetor. Não está no caminho da API."
+    },
+    {
+      "id": "golden",
+      "lane": "avaliacao",
+      "label": "Golden sets v1 e v2",
+      "kind": "process",
+      "status": "active",
+      "repo": "development",
+      "path": "evals/datasets",
+      "description": "16 e 22 casos determinísticos de roteamento, bloqueio, abstenção e recuperação."
+    },
+    {
+      "id": "ragas",
+      "lane": "avaliacao",
+      "label": "RAGAS 0.4.3",
+      "kind": "process",
+      "status": "active",
+      "repo": "development",
+      "path": "evals/runners",
+      "description": "Faithfulness, Answer Relevancy, Context Recall e Precision, com juiz em pt-BR."
+    },
+    {
+      "id": "juiz",
+      "lane": "avaliacao",
+      "label": "Juiz LLM",
+      "kind": "process",
+      "status": "active",
+      "repo": "development",
+      "path": "evals/runners/semana4_avaliacao.py",
+      "description": "Rubrica de 0 a 10 via Ollama, com semana3-qwen14: o juiz é da mesma família dos modelos avaliados."
+    },
+    {
+      "id": "holdout",
+      "lane": "avaliacao",
+      "label": "Holdout cego do guardrail",
+      "kind": "process",
+      "status": "planned",
+      "repo": "development",
+      "path": "evals/configs/protocolo_holdout_guardrail.md",
+      "description": "Protocolo pronto: mínimo de 40/40 casos, SHA-256 congelado antes da 1ª medição. O arquivo ainda não existe na main."
+    },
+    {
+      "id": "humana",
+      "lane": "avaliacao",
+      "label": "Revisão humana clínica",
+      "kind": "process",
+      "status": "planned",
+      "description": "Pendente em todas as semanas. Sem ela nenhum resultado vira APROVADO."
+    }
+  ],
+  "edges": [
+    {
+      "from": "pergunta",
+      "to": "pii"
+    },
+    {
+      "from": "pii",
+      "to": "triagem"
+    },
+    {
+      "from": "camada1",
+      "to": "triagem"
+    },
+    {
+      "from": "injecao",
+      "to": "triagem"
+    },
+    {
+      "from": "camada2",
+      "to": "triagem",
+      "label": "não ligada",
+      "style": "dashed"
+    },
+    {
+      "from": "llamaguard",
+      "to": "camada2",
+      "style": "dashed"
+    },
+    {
+      "from": "triagem",
+      "to": "auditor",
+      "label": "permitido"
+    },
+    {
+      "from": "triagem",
+      "to": "consultor",
+      "label": "permitido"
+    },
+    {
+      "from": "triagem",
+      "to": "sintetizador",
+      "label": "bloqueio",
+      "style": "dashed"
+    },
+    {
+      "from": "auditor",
+      "to": "matcher"
+    },
+    {
+      "from": "auditor",
+      "to": "evidencia"
+    },
+    {
+      "from": "consultor",
+      "to": "hibrido"
+    },
+    {
+      "from": "auditor",
+      "to": "sintetizador"
+    },
+    {
+      "from": "consultor",
+      "to": "sintetizador"
+    },
+    {
+      "from": "sintetizador",
+      "to": "registry"
+    },
+    {
+      "from": "registry",
+      "to": "qwen7",
+      "label": "opcional",
+      "style": "dashed"
+    },
+    {
+      "from": "registry",
+      "to": "gemini",
+      "label": "opcional",
+      "style": "dashed"
+    },
+    {
+      "from": "sintetizador",
+      "to": "saida"
+    },
+    {
+      "from": "golden",
+      "to": "hibrido"
+    },
+    {
+      "from": "ragas",
+      "to": "qwen14"
+    },
+    {
+      "from": "ragas",
+      "to": "bgem3"
+    },
+    {
+      "from": "juiz",
+      "to": "qwen14"
+    },
+    {
+      "from": "holdout",
+      "to": "camada1",
+      "style": "dashed"
+    },
+    {
+      "from": "holdout",
+      "to": "camada2",
+      "style": "dashed"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "high",
+      "title": "Nenhum modelo passa em tudo",
+      "text": "Na Semana 4, o 7B passa em relevância e o 14B em fidelidade, mas nenhum passa nas duas, e ambos ficam acima de 8 s no p95."
+    },
+    {
+      "severity": "high",
+      "title": "Segurança clínica reprovada",
+      "text": "Nos quatro braços da Semana 3, todos falharam em SEG-CLI-01 a 04. O guardrail por regras ainda deixa passar paráfrases."
+    },
+    {
+      "severity": "high",
+      "title": "Juiz da mesma família",
+      "text": "O juiz e o gerador são Qwen 2.5. Um juiz de outra família, ou revisão humana amostral, é necessário antes de citar o Faithfulness de 1,0000."
+    },
+    {
+      "severity": "medium",
+      "title": "Camada 2 sem medição",
+      "text": "O Llama Guard 3 está pronto, mas o holdout cego que decide se ele entra ainda não foi escrito e congelado."
+    },
+    {
+      "severity": "medium",
+      "title": "Embeddings divergentes",
+      "text": "O data-engineering indexa com gemini-embedding-2, a avaliação usa bge-m3 e a API não usa vetor. Se o vetor entrar na API, é preciso escolher um único modelo."
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "embeddingModel": "bge-m3",
+  "sourceRepo": "development",
+  "sourceCommit": "3d0ded5",
+  "agents": [
+    {
+      "id": "triagem",
+      "label": "1. Triagem",
+      "question": "As perguntas que devem ser bloqueadas ficam separadas das que devem passar?",
+      "datasets": [
+        {
+          "id": "guardrail_clinico_v1",
+          "path": "evals/datasets/guardrail_clinico_v1.jsonl",
+          "format": "jsonl",
+          "idField": "id",
+          "textField": "pergunta",
+          "groupField": "esperado",
+          "labelField": "categoria"
+        },
+        {
+          "id": "injecao_v1",
+          "path": "evals/datasets/injecao_v1.jsonl",
+          "format": "jsonl",
+          "idField": "id",
+          "textField": "pergunta",
+          "groupField": "esperado",
+          "labelField": "categoria"
+        },
+        {
+          "id": "seguranca_variantes_v2",
+          "path": "evals/datasets/seguranca_variantes_v2.jsonl",
+          "format": "jsonl",
+          "idField": "id",
+          "textField": "pergunta",
+          "labelField": "categoria",
+          "groupValue": "variante de segurança (v2)"
+        }
+      ]
+    },
+    {
+      "id": "auditor_farmaceutico",
+      "label": "2. Auditor farmacêutico",
+      "question": "O catálogo se agrupa por rota de dispensação? As evidências se agrupam por fonte?",
+      "datasets": [
+        {
+          "id": "catalogo_canonico",
+          "path": "data/processed/medicamentos_sus_canonical.json",
+          "format": "json",
+          "idField": "medication_id",
+          "textTemplate": "{dcb_name} {concentration} {pharmaceutical_form}",
+          "groupField": "dispensation_route",
+          "labelField": "dcb_name"
+        },
+        {
+          "id": "evidencias_literais",
+          "path": "data/processed/evidence_chunks_v2.json",
+          "format": "json",
+          "idField": "chunk_id",
+          "textField": "text",
+          "groupField": "source.source_id",
+          "labelField": "source.version"
+        }
+      ]
+    },
+    {
+      "id": "consultor_normativo",
+      "label": "3. Consultor normativo",
+      "question": "As perguntas do golden set caem perto dos trechos normativos que deveriam recuperar?",
+      "datasets": [
+        {
+          "id": "chunks_normativos",
+          "path": "data/processed/normative_chunks.json",
+          "format": "json",
+          "idField": "chunk_id",
+          "textField": "text",
+          "groupField": "source_id",
+          "labelField": "section"
+        },
+        {
+          "id": "perguntas_golden_v2",
+          "path": "evals/datasets/golden_set_v2_consolidado.jsonl",
+          "format": "jsonl",
+          "idField": "id",
+          "textField": "query",
+          "groupValue": "pergunta (golden v2)",
+          "labelField": "persona"
+        }
+      ]
+    },
+    {
+      "id": "sintetizador_cidadao",
+      "label": "4. Sintetizador cidadão",
+      "question": "As respostas de referência se agrupam pela rota que devem orientar?",
+      "datasets": [
+        {
+          "id": "respostas_referencia_v2",
+          "path": "evals/datasets/golden_set_v2_consolidado.jsonl",
+          "format": "jsonl",
+          "idField": "id",
+          "textField": "reference_answer",
+          "groupField": "expected_route",
+          "labelField": "persona"
+        }
+      ]
+    }
+  ]
+}

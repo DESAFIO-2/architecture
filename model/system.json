@@ -1,0 +1,466 @@
+{
+  "id": "system",
+  "title": "Arquitetura atual",
+  "subtitle": "Como o SUS Cidadão está hoje nos quatro repositórios da organização DESAFIO-2.",
+  "asOf": "2026-11-24",
+  "sources": [
+    {
+      "repo": "development",
+      "commit": "3d0ded5"
+    },
+    {
+      "repo": "data-engineering",
+      "commit": "8b9f15a"
+    },
+    {
+      "repo": "Data-Science",
+      "commit": "8ea1148"
+    },
+    {
+      "repo": "Front-End-",
+      "commit": "57c861e"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "fontes",
+      "title": "Fontes oficiais"
+    },
+    {
+      "id": "dados",
+      "title": "Engenharia de dados"
+    },
+    {
+      "id": "artefatos",
+      "title": "Artefatos versionados"
+    },
+    {
+      "id": "backend",
+      "title": "Backend (FastAPI)"
+    },
+    {
+      "id": "clientes",
+      "title": "Clientes"
+    },
+    {
+      "id": "llmops",
+      "title": "Avaliação e LLMOps"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "rename",
+      "lane": "fontes",
+      "label": "RENAME 2024",
+      "kind": "external",
+      "status": "active",
+      "description": "Relação Nacional de Medicamentos Essenciais, 2ª edição (fonte F01)."
+    },
+    {
+      "id": "remedf",
+      "lane": "fontes",
+      "label": "REME-DF",
+      "kind": "external",
+      "status": "active",
+      "description": "Relação de medicamentos da SES-DF (fonte F03)."
+    },
+    {
+      "id": "pfpb",
+      "lane": "fontes",
+      "label": "Farmácia Popular",
+      "kind": "external",
+      "status": "active",
+      "description": "Portaria GM/MS 3.677/2024, elenco de gratuidade (fonte F04)."
+    },
+    {
+      "id": "sisreg",
+      "lane": "fontes",
+      "label": "SISREG / CEAF",
+      "kind": "external",
+      "status": "active",
+      "description": "Protocolos de regulação e manuais do componente especializado."
+    },
+    {
+      "id": "infosaude",
+      "lane": "fontes",
+      "label": "InfoSaúde-DF",
+      "kind": "external",
+      "status": "active",
+      "description": "Estoque CEAF e mapas de unidades, publicados ao vivo pela SES-DF."
+    },
+    {
+      "id": "de-ingestao",
+      "lane": "dados",
+      "label": "Ingestão e curadoria",
+      "kind": "process",
+      "status": "active",
+      "repo": "data-engineering",
+      "path": "src/ingestion, src/rag/curation.py",
+      "description": "Extração dos PDFs oficiais, revisão factual e normalização aditiva (v10)."
+    },
+    {
+      "id": "de-release",
+      "lane": "dados",
+      "label": "Release do corpus v10",
+      "kind": "store",
+      "status": "active",
+      "repo": "data-engineering",
+      "path": "data/releases (DVC)",
+      "description": "Release documental normalizado com 2.114 trechos, versionado no DVC e aprovado em 18/11."
+    },
+    {
+      "id": "de-chroma",
+      "lane": "dados",
+      "label": "Índice ChromaDB v10",
+      "kind": "store",
+      "status": "active",
+      "repo": "data-engineering",
+      "path": "DVC",
+      "description": "Índice vetorial de 2.114 chunks. Usado pelo chat de terminal do data-engineering; a API do backend não usa vetor em execução."
+    },
+    {
+      "id": "ds-sync",
+      "lane": "dados",
+      "label": "Robô de estoque CEAF",
+      "kind": "process",
+      "status": "active",
+      "repo": "Data-Science",
+      "path": ".github/workflows/infosaude-stock-sync.yml",
+      "description": "GitHub Actions em dias úteis (09h e 18h UTC) e às segundas, faz commit dos snapshots de estoque e mapas."
+    },
+    {
+      "id": "canonica",
+      "lane": "artefatos",
+      "label": "Tabela canônica",
+      "kind": "store",
+      "status": "active",
+      "repo": "development",
+      "path": "data/processed/medicamentos_sus_canonical.json",
+      "description": "1.708 apresentações em DCB, com rota de dispensação, documentos exigidos e validade da receita."
+    },
+    {
+      "id": "evidencias",
+      "lane": "artefatos",
+      "label": "Evidências literais",
+      "kind": "store",
+      "status": "active",
+      "repo": "development",
+      "path": "data/processed/evidence_chunks_v2.json",
+      "description": "2.114 trechos literais com página e SHA-256 da fonte, um por occurrence_id."
+    },
+    {
+      "id": "normativos",
+      "lane": "artefatos",
+      "label": "Chunks normativos",
+      "kind": "store",
+      "status": "active",
+      "repo": "development",
+      "path": "data/processed/normative_chunks.json",
+      "description": "20 trechos de portarias e protocolos (Farmácia Popular, CEAF, SISREG)."
+    },
+    {
+      "id": "estoque",
+      "lane": "artefatos",
+      "label": "Snapshots de estoque",
+      "kind": "store",
+      "status": "planned",
+      "repo": "development",
+      "path": "data/processed/ceaf_live_stock.json",
+      "description": "Fora do fluxo: falta política de frescor e contrato aprovado."
+    },
+    {
+      "id": "api",
+      "lane": "backend",
+      "label": "API FastAPI",
+      "kind": "service",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/api",
+      "description": "GET /health, GET /api/v1/medications/autocomplete, POST /api/v1/prescriptions/audit e POST /api/v1/agents/orchestrate. Stateless: rejeita session_id."
+    },
+    {
+      "id": "container",
+      "lane": "backend",
+      "label": "ServiceContainer",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/container.py",
+      "description": "Único ponto de composição de dependências (Clean Architecture)."
+    },
+    {
+      "id": "grafo",
+      "lane": "backend",
+      "label": "Grafo de 4 agentes",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/agents/orchestrator.py",
+      "description": "LangGraph StateGraph: triagem, auditor e consultor em paralelo, sintetizador."
+    },
+    {
+      "id": "guardrails",
+      "lane": "backend",
+      "label": "Guardrails",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/guardrails, backend/app/seguranca",
+      "description": "Mascaramento de PII (LGPD), bloqueio clínico por regras, anti-injeção e validação de saída."
+    },
+    {
+      "id": "retrieval",
+      "lane": "backend",
+      "label": "Recuperação híbrida",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/retrieval",
+      "description": "Matcher tabular DCB, BM25 e TF-IDF combinados por RRF. Sem vetor em execução."
+    },
+    {
+      "id": "gerador",
+      "lane": "backend",
+      "label": "GeneratorPort",
+      "kind": "component",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/infrastructure/llm/generator.py",
+      "description": "Padrão determinístico (sem LLM). Ollama ou Gemini só quando configurado."
+    },
+    {
+      "id": "fe-app",
+      "lane": "clientes",
+      "label": "App Front-End-",
+      "kind": "client",
+      "status": "experimental",
+      "repo": "Front-End-",
+      "path": "src",
+      "description": "Expo + NativeWind com login, início e farmácias. Sem commits desde 06/11 e não chama a API do backend."
+    },
+    {
+      "id": "ds-app",
+      "lane": "clientes",
+      "label": "Protótipo Expo + Zelo",
+      "kind": "client",
+      "status": "experimental",
+      "repo": "Data-Science",
+      "path": "prototype/src/services/api.ts",
+      "description": "App mobile com voz Zelo. Usa um único endereço (porta 8000) para dois contratos: /v1/chat, /v1/voice-turn, /v1/tts e /v1/sessions da API do Data-Science, mais autocomplete e auditoria, que só existem no development."
+    },
+    {
+      "id": "ds-api",
+      "lane": "clientes",
+      "label": "API do Data-Science",
+      "kind": "service",
+      "status": "experimental",
+      "repo": "Data-Science",
+      "path": "src/sus_cidadao_ds/api/app.py",
+      "description": "FastAPI paralela com chat, voz (Gemini 2.5 Flash), TTS e sessões com memória. Tem agentes, RAG v9 e guardrails próprios."
+    },
+    {
+      "id": "cli",
+      "lane": "clientes",
+      "label": "Demo CLI",
+      "kind": "client",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/agents/demo.py",
+      "description": "Demonstração do grafo pela API em processo."
+    },
+    {
+      "id": "evals",
+      "lane": "llmops",
+      "label": "Suíte de avaliação",
+      "kind": "process",
+      "status": "active",
+      "repo": "development",
+      "path": "evals/",
+      "description": "Golden sets v1/v2, RAGAS 0.4.3, suíte de segurança de 4 braços e avaliação da Semana 4."
+    },
+    {
+      "id": "mlflow",
+      "lane": "llmops",
+      "label": "MLflow",
+      "kind": "store",
+      "status": "active",
+      "repo": "development",
+      "path": "observability/mlflow_tracker.py",
+      "description": "Registra guardrail, segurança, RAGAS, 4 braços e Semana 4."
+    },
+    {
+      "id": "otel",
+      "lane": "llmops",
+      "label": "OpenTelemetry / Jaeger",
+      "kind": "service",
+      "status": "active",
+      "repo": "development",
+      "path": "backend/app/core/telemetry.py, observability/docker-compose.yml",
+      "description": "Spans por operação, sem texto do cidadão."
+    },
+    {
+      "id": "ci",
+      "lane": "llmops",
+      "label": "CI GitHub Actions",
+      "kind": "process",
+      "status": "active",
+      "repo": "development",
+      "path": ".github/workflows",
+      "description": "Lint, tipos, testes, benchmark determinístico e smoke de segurança."
+    }
+  ],
+  "edges": [
+    {
+      "from": "rename",
+      "to": "de-ingestao"
+    },
+    {
+      "from": "remedf",
+      "to": "de-ingestao"
+    },
+    {
+      "from": "pfpb",
+      "to": "de-ingestao"
+    },
+    {
+      "from": "sisreg",
+      "to": "de-ingestao"
+    },
+    {
+      "from": "infosaude",
+      "to": "ds-sync"
+    },
+    {
+      "from": "de-ingestao",
+      "to": "de-release"
+    },
+    {
+      "from": "de-release",
+      "to": "de-chroma"
+    },
+    {
+      "from": "de-release",
+      "to": "evidencias",
+      "label": "portação",
+      "style": "dashed"
+    },
+    {
+      "from": "de-release",
+      "to": "canonica",
+      "label": "portação",
+      "style": "dashed"
+    },
+    {
+      "from": "ds-sync",
+      "to": "estoque",
+      "style": "dashed"
+    },
+    {
+      "from": "sisreg",
+      "to": "normativos",
+      "label": "curadoria manual",
+      "style": "dashed"
+    },
+    {
+      "from": "canonica",
+      "to": "retrieval"
+    },
+    {
+      "from": "evidencias",
+      "to": "retrieval"
+    },
+    {
+      "from": "normativos",
+      "to": "retrieval"
+    },
+    {
+      "from": "api",
+      "to": "container"
+    },
+    {
+      "from": "container",
+      "to": "grafo"
+    },
+    {
+      "from": "grafo",
+      "to": "guardrails"
+    },
+    {
+      "from": "grafo",
+      "to": "retrieval"
+    },
+    {
+      "from": "grafo",
+      "to": "gerador"
+    },
+    {
+      "from": "cli",
+      "to": "api"
+    },
+    {
+      "from": "fe-app",
+      "to": "api",
+      "label": "não integrado",
+      "style": "dashed"
+    },
+    {
+      "from": "grafo",
+      "to": "otel"
+    },
+    {
+      "from": "evals",
+      "to": "api"
+    },
+    {
+      "from": "evals",
+      "to": "mlflow"
+    },
+    {
+      "from": "ci",
+      "to": "evals"
+    },
+    {
+      "from": "ds-app",
+      "to": "ds-api",
+      "label": "chat e voz"
+    },
+    {
+      "from": "ds-app",
+      "to": "api",
+      "label": "autocomplete e auditoria",
+      "style": "dashed"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "high",
+      "title": "Núcleo duplicado entre repositórios",
+      "text": "O Data-Science tem agentes, recuperação, guardrails, API e corpus v9 próprios, paralelos ao backend do development. Duas implementações do mesmo domínio vão divergir."
+    },
+    {
+      "severity": "high",
+      "title": "Dois apps mobile",
+      "text": "O Front-End- está parado desde 06/11 e não chama nenhuma API. O app ativo é o protótipo do Data-Science, que mistura no mesmo endereço os contratos de duas APIs."
+    },
+    {
+      "severity": "high",
+      "title": "Sessão contra stateless",
+      "text": "A API do Data-Science guarda sessões (/v1/sessions). O backend do development rejeita session_id porque o contrato é stateless (docs/architecture/agentes_semana4.md). Os dois desenhos são incompatíveis."
+    },
+    {
+      "severity": "medium",
+      "title": "Corpus em três versões",
+      "text": "O backend usa a portação do v9, o data-engineering aprovou o v10 em 18/11, e o Data-Science replica o v9. Falta definir qual release alimenta a API."
+    },
+    {
+      "severity": "medium",
+      "title": "Modelo de produção não decidido",
+      "text": "A API sobe em modo determinístico, o config aponta Gemini, e os experimentos usam Qwen 2.5 local. Nenhum ADR escolhe o modelo do cidadão."
+    },
+    {
+      "severity": "low",
+      "title": "Estoque fora do fluxo",
+      "text": "Os snapshots do robô chegam ao repositório, mas a API não os usa por falta de política de frescor. Isso está correto até existir o contrato."
+    }
+  ]
+}

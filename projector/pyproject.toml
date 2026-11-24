@@ -1,0 +1,30 @@
+[project]
+name = "projector"
+version = "0.1.0"
+description = "Gera projeções 3D dos embeddings que cada agente do SUS Cidadão consulta."
+requires-python = ">=3.12"
+dependencies = ["numpy>=2.1"]
+
+[project.scripts]
+projector = "projector.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
